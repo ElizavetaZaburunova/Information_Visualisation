@@ -15,3 +15,13 @@ display
 
 
 
+## Todo
+[] Map stylen, mit div begrenzen 
+Barchart:
+    - [] Tooltip
+    - [] Auswahlfeld mit Country, man kann mehrere Länder auswählen
+
+[] Table of top-k job titles (weiß noch nicht welches Chart dafür)
+[] Chart für Remote Job, also employee_residence & company_location -> noch keine Idee was genau und wie
+
+Styling!
