@@ -35,6 +35,31 @@ const countrySalariesMean = d3
 });
 console.log(countrySalariesMeanValue); */
 
+var countriesArray = countrySalariesMean.map(function (d) {
+  return d.key;
+});
+
+var dropdown = d3.selectAll("#dropdown");
+dropdown
+  .selectAll("option")
+  .data(countriesArray)
+  .enter()
+  .append("option")
+  .attr("value", function (d) {
+    return d;
+  })
+  .text(function (d) {
+    return d;
+  });
+//selection grab all the options, and then filter out those that aren't selected
+dropdown.on("change", function (d) {
+  d3.select(this)
+    .selectAll("option")
+    .filter(function (d, i) {
+      return this.selected;
+    });
+});
+
 // set the dimensions and margins of the graph
 var margin = { top: 30, right: 30, bottom: 70, left: 60 },
   width = 460 - margin.left - margin.right,

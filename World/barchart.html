@@ -6,21 +6,18 @@
     <title>Geomapping</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
+  <script src="https://d3js.org/d3.v4.js"></script>
+  <script type="module" src="./scripts/barchart.js"></script>
 
+  <!-- Load d3.js -->
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
   <body translate="no">
-    <div class="container centered">
-      <div id="myGraph"></div>
-    </div>
+    <select multiple id="dropdown"></select>
+
     <!-- Load Barchart -->
     <div id="barchart"></div>
-
-    <script src="https://d3js.org/d3.v4.js"></script>
-    <script type="module" src="./scripts/barchart.js"></script>
-
-    <!-- Load d3.js -->
-    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
-    <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.0/lib/bundle.min.js"></script>
   </body>
 </html>
