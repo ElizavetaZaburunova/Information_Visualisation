@@ -1,10 +1,6 @@
 import getCountryISO2 from "./iso3to2.js";
 var salary_data = undefined;
-
-//load the data with d3 of the countries and the mean salary
-/* d3.csv("./data/salaries.csv", function (data) {
-
-}); */
+var selections = undefined;
 
 await fetch("./data/salaries.json")
   .then((response) => response.json())
@@ -24,6 +20,7 @@ const countrySalariesMean = d3
   })
   .entries(salary_data);
 
+//if you want to sort the data by salary
 /* countrySalariesMean.sort((a, b) => {
   return b.value - a.value;
 }); */
@@ -39,6 +36,9 @@ var countriesArray = countrySalariesMean.map(function (d) {
   return d.key;
 });
 
+// ----------------
+// Dropdown menu for the countries
+// ----------------
 var dropdown = d3.selectAll("#dropdown");
 dropdown
   .selectAll("option")
@@ -51,50 +51,24 @@ dropdown
   .text(function (d) {
     return d;
   });
+// ----------------
+// HELP with Filtering, I need selected couuntries AND their salary mean at the end to update the chart
+// ----------------
 //selection grab all the options, and then filter out those that aren't selected
 dropdown.on("change", function (d) {
-  d3.select(this)
+  var selections = d3
+    .select(this)
     .selectAll("option")
     .filter(function (d, i) {
       return this.selected;
     });
+  console.log(selections);
 });
 
 // set the dimensions and margins of the graph
 var margin = { top: 30, right: 30, bottom: 70, left: 60 },
   width = 460 - margin.left - margin.right,
   height = 400 - margin.top - margin.bottom;
-
-// ----------------
-// Create a tooltip
-// ----------------
-var tooltip = d3
-  .select("#barchart")
-  .append("div")
-  .style("opacity", 0)
-  .attr("class", "tooltip")
-  .style("background-color", "white")
-  .style("border", "solid")
-  .style("border-width", "1px")
-  .style("border-radius", "5px")
-  .style("padding", "10px");
-
-// Three function that change the tooltip when user hover / move / leave a cell
-var mouseover = function (countrySalariesMean) {
-  var countryName = getCountryISO2(countrySalariesMean.key);
-  var meanSalary = countrySalariesMean.value;
-  tooltip
-    .html("country: " + countryName + "<br>" + "Mean Salary: " + meanSalary)
-    .style("opacity", 1);
-};
-var mousemove = function (d) {
-  tooltip
-    .style("left", d3.mouse(this)[0] + 90 + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
-    .style("top", d3.mouse(this)[1] + "px");
-};
-var mouseleave = function (d) {
-  tooltip.style("opacity", 0);
-};
 
 // append the svg object to the body of the page
 var svg = d3
@@ -128,6 +102,37 @@ function drawBarChart(data) {
   // Add Y axis
   var y = d3.scaleLinear().domain([0, 160000]).range([height, 0]);
   svg.append("g").call(d3.axisLeft(y));
+
+  // ----------------
+  // Create a tooltip --> HELP: I need the tooltip to be directly right next to the bar
+  // ----------------
+  var tooltip = d3
+    .select("#barchart")
+    .append("div")
+    .style("opacity", 0)
+    .attr("class", "tooltip")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("padding", "10px");
+
+  // Three function that change the tooltip when user hover / move / leave a cell
+  var mouseover = function (countrySalariesMean) {
+    var countryName = countrySalariesMean.key;
+    var meanSalary = countrySalariesMean.value;
+    tooltip
+      .html("Country: " + countryName + "<br>" + "Mean Salary: " + meanSalary)
+      .style("opacity", 1);
+  };
+  var mousemove = function (d) {
+    tooltip
+      .style("left", d3.mouse(this)[0] + 90 + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
+      .style("top", d3.mouse(this)[1] + "px");
+  };
+  var mouseleave = function (d) {
+    tooltip.style("opacity", 0);
+  };
 
   // Bars
   svg
