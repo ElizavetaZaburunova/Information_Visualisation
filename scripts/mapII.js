@@ -62,48 +62,49 @@ function computeMeanPerCountry(raw_data) {
 }
 
 function drawHistogram(incomeData, selectedCountry=undefined) {
+  // Clear previous data from chart
   histogram_svg.selectAll("rect").remove();
   histogram_svg.selectAll("g").remove();
 
+  // Check if data is filtered by country
   if (selectedCountry) {
     incomeData = incomeData.filter(d => d.company_location === selectedCountry)
   }
-      // Draw the histogram
-      // X axis: scale and draw:
-    var xAxis = d3.scaleLinear()
-        .domain([0, d3.max(incomeData, d => d.salary_in_usd)])     // can use this instead of 1000 to have the max of data: d3.max(data, function(d) { return +d.price })
-        .range([0, width]);
 
-    histogram_svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(xAxis));
+  // X axis: scale and draw
+  var xAxis = d3.scaleLinear()
+      .domain([0, d3.max(incomeData, d => d.salary_in_usd)])
+      .range([0, width]);
 
+  histogram_svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(xAxis));
 
-    // Compute bins 
-    var histogram = d3.histogram()
-    .value(function(d) { return d.salary_in_usd; })   // I need to give the vector of value
-    .domain(xAxis.domain())  // then the domain of the graphic
-    .thresholds(xAxis.ticks(70)); // then the numbers of bins
+  // Compute 10 bins for the histogram
+  var histogram = d3.histogram()
+  .value(function(d) { return d.salary_in_usd; })
+  .domain(xAxis.domain()) 
+  .thresholds(xAxis.ticks(10));
 
-    var bins = histogram(incomeData);
-    
-      // Y axis: scale and draw:
-    var yAxis = d3.scaleLinear()
-        .range([height, 0]);
-        yAxis.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
-    histogram_svg.append("g")
-        .call(d3.axisLeft(yAxis));
+  var bins = histogram(incomeData);
+  
+  // Y axis: scale and draw
+  var yAxis = d3.scaleLinear()
+      .range([height, 0]);
+      yAxis.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
+  histogram_svg.append("g")
+      .call(d3.axisLeft(yAxis));
 
-          // append the bar rectangles to the svg element
-    histogram_svg.selectAll("rect")
-        .data(bins)
-        .enter()
-        .append("rect")
-          .attr("x", 1)
-          .attr("transform", function(d) { return "translate(" + xAxis(d.x0) + "," + yAxis(d.length) + ")"; })
-          .attr("width", function(d) { return xAxis(d.x1) - xAxis(d.x0) -1 ; })
-          .attr("height", function(d) { return height - yAxis(d.length); })
-          .style("fill", "#69b3a2")
+  // Draw the bars of the histogram
+  histogram_svg.selectAll("rect")
+      .data(bins)
+      .enter()
+      .append("rect")
+        .attr("x", 1)
+        .attr("transform", function(d) { return "translate(" + xAxis(d.x0) + "," + yAxis(d.length) + ")"; })
+        .attr("width", function(d) { return xAxis(d.x1) - xAxis(d.x0) -1 ; })
+        .attr("height", function(d) { return height - yAxis(d.length); })
+        .style("fill", "#69b3a2")
 }
 
 function ready(error, topo, incomeData) {
@@ -112,6 +113,7 @@ function ready(error, topo, incomeData) {
     .domain([d3.min(data.values()), d3.max(data.values())])
     .range(d3.schemeBlues[7]);
 
+  // Mouse over event
   let mouseOver = function (d) {
     // Reset all other countries 
     d3.selectAll(".Country").style("opacity", 1).style("stroke", "transparent");
@@ -125,11 +127,13 @@ function ready(error, topo, incomeData) {
       .style("stroke", "black");
   };
 
+  // Mouse over event, reset all styles
   let mouseLeave = function (d) {
     d3.selectAll(".Country").transition().duration(200).style("opacity", 1);
     d3.select(this).transition().duration(200).style("stroke", "transparent");
   };
 
+  // Mouse click event on country
   let countryClick = function (d) {
     const countryISO2 = getCountryISO2(d.id);
     drawHistogram(incomeData, countryISO2);
@@ -159,5 +163,6 @@ function ready(error, topo, incomeData) {
     .on("mouseleave", mouseLeave)
     .on("click", countryClick);
 
+    // Draw the histogram for the whole world without any filter by default
     drawHistogram(incomeData)
 }
