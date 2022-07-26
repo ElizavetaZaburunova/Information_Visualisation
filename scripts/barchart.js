@@ -12,6 +12,9 @@ var svg = d3
   .append("g")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+var x = d3.scaleBand();
+var y = d3.scaleLinear();
+
 d3.csv("./data/salaries.csv", function (csv_data) {
   //get mean salary for country
   const countrySalariesMean = d3
@@ -61,7 +64,12 @@ d3.csv("./data/salaries.csv", function (csv_data) {
       .filter(function (d, i) {
         return this.selected;
       });
-    console.log(selections);
+
+    var selectedCountryIDs = selections._groups[0].map(function (d) {
+      return d.__data__;
+    });
+
+    updateFunction(selectedCountryIDs);
   });
 
   // ----------------
@@ -95,46 +103,58 @@ d3.csv("./data/salaries.csv", function (csv_data) {
     tooltip.style("opacity", 0);
   };
 
-  // Add X axis
-  var x = d3
-    .scaleBand()
-    .range([0, width])
-    .domain(
-      countrySalariesMean.map(function (data) {
-        return data.key;
+  var updateFunction = function (selectedCountries = []) {
+    var updatedData = countrySalariesMean;
+    svg.selectAll("rect").remove();
+    svg.selectAll("g").remove();
+    if (selectedCountries.length !== 0) {
+      updatedData = updatedData.filter(function (d) {
+        // Check if string in array of strings
+        return selectedCountries.includes(d.key);
+      });
+    }
+
+    // Add X axis
+    x.range([0, width])
+      .domain(
+        updatedData.map(function (data) {
+          return data.key;
+        })
+      )
+      .padding(0.2);
+    svg
+      .append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end");
+
+    // Add Y axis
+    y.domain([0, 160000]).range([height, 0]);
+    svg.append("g").call(d3.axisLeft(y));
+
+    // Add Bars
+    svg
+      .selectAll("mybar")
+      .data(updatedData)
+      .enter()
+      .append("rect")
+      .attr("x", function (updatedData) {
+        return x(updatedData.key);
       })
-    )
-    .padding(0.2);
-  svg
-    .append("g")
-    .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x))
-    .selectAll("text")
-    .attr("transform", "translate(-10,0)rotate(-45)")
-    .style("text-anchor", "end");
+      .attr("y", function (updatedData) {
+        return y(updatedData.value);
+      })
+      .attr("width", x.bandwidth())
+      .attr("height", function (updatedData) {
+        return height - y(updatedData.value);
+      })
+      .attr("fill", "#69b3a2")
+      .on("mouseover", mouseover)
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave);
+  };
 
-  // Add Y axis
-  var y = d3.scaleLinear().domain([0, 160000]).range([height, 0]);
-  svg.append("g").call(d3.axisLeft(y));
-
-  // Add Bars
-  svg
-    .selectAll("mybar")
-    .data(countrySalariesMean)
-    .enter()
-    .append("rect")
-    .attr("x", function (countrySalariesMean) {
-      return x(countrySalariesMean.key);
-    })
-    .attr("y", function (countrySalariesMean) {
-      return y(countrySalariesMean.value);
-    })
-    .attr("width", x.bandwidth())
-    .attr("height", function (countrySalariesMean) {
-      return height - y(countrySalariesMean.value);
-    })
-    .attr("fill", "#69b3a2")
-    .on("mouseover", mouseover)
-    .on("mousemove", mousemove)
-    .on("mouseleave", mouseleave);
+  updateFunction();
 });

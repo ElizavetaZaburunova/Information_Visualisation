@@ -91,7 +91,7 @@ function drawHistogram(incomeData, selectedCountry=undefined) {
   // Y axis: scale and draw
   var yAxis = d3.scaleLinear()
       .range([height, 0]);
-      yAxis.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
+      yAxis.domain([0, d3.max(bins, function(d) { return d.length; })]);
   histogram_svg.append("g")
       .call(d3.axisLeft(yAxis));
 
@@ -109,6 +109,7 @@ function drawHistogram(incomeData, selectedCountry=undefined) {
 
 function ready(error, topo, incomeData) {
   var data = computeMeanPerCountry(incomeData);
+  
   var colorScale = d3.scaleQuantize()
     .domain([d3.min(data.values()), d3.max(data.values())])
     .range(d3.schemeBlues[7]);
