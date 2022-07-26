@@ -14,6 +14,7 @@ var svg = d3
 
 // Parse the Data
 d3.csv("./data/salaries.csv", function (csv_data) {
+  //get mean salary for country
   var countrySalariesMean = d3
     .nest()
     .key(function (d) {
@@ -25,7 +26,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
       });
     })
     .entries(csv_data);
-
+  //sort data by salary and get the top 10
   var topTenData = countrySalariesMean
     .sort((a, b) => {
       return b.value - a.value;
