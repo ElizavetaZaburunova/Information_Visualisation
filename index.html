@@ -3,14 +3,36 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Geomapping</title>
+    <title>Visualisation Data Science Job Salaries</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
 
   <body translate="no">
-    <h1>Final Visualisation</h1>
-    <a href="map.html">Map</a>
-    <a href="barchart.html">Barchart</a>
-    <a href="topTen.html">Top Ten</a>
+    <!-- Load d3.js -->
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-array@3"></script>
+
+    <div class="center">
+    <h1>Visualisation Data Science Job Salaries</h1>
+    <p><i>Final Project from Elizaveta Zaburunova</i></p>
+    <h2>1. Geomapping with Data Science Jobs around the world</h1>
+    <h3>1.1 Map</h1>
+    <p>Click on a marked country</p>
+
+    <div id="map"></div>
+    <h3>1.2 Histogram from selected country and its salary distribution </h1>
+    <div id="histogram"></div>
+    <h3>1.3 Barchart from selected country and its Top-Ten job title distribution</h1>
+    <div id="topTen"></div>
+    <h2>2. Barchart with multiple select country </h1>
+    <p>Select several countries and see the distribution of the average salary</p>
+    <select multiple id="dropdown" size="15"></select>
+    <div id="barchart"></div>
+    
+    <script type="module" src="./scripts/map.js"></script>
+    <script type="module" src="./scripts/barchart.js"></script>
+    </div>
   </body>
 </html>

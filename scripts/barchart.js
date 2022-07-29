@@ -1,10 +1,10 @@
 // set the dimensions and margins of the graph
-var margin = { top: 30, right: 30, bottom: -450, left: 60 },
+var margin = { top: 30, right: 30, bottom: -350, left: 100 },
   width = 1000 - margin.left - margin.right,
   height = 1000 - margin.top;
 
 // append the svg object to the body of the page
-var svg = d3
+var svgBarchart = d3
   .select("#barchart")
   .append("svg")
   .attr("width", width + margin.left + margin.right)
@@ -12,10 +12,12 @@ var svg = d3
   .append("g")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-var x = d3.scaleBand();
-var y = d3.scaleLinear();
+var xAxisBarChart = d3.scaleBand();
+var yAxisBarChart = d3.scaleLinear();
 
-var g = svg.append("g").attr("transform", "translate(" + 100 + "," + 100 + ")");
+var g = svgBarchart
+  .append("g")
+  .attr("transform", "translate(" + 100 + "," + 100 + ")");
 
 d3.csv("./data/salaries.csv", function (csv_data) {
   //get mean salary for country
@@ -84,20 +86,22 @@ d3.csv("./data/salaries.csv", function (csv_data) {
     .style("border-width", "1px")
     .style("border-radius", "5px")
     .style("max-width", "200px")
-    .style("padding", "10px");
-
+    .style("padding", "10px")
+    .style("position", "absolute");
   // Three function that change the tooltip when user hover / move / leave a cell
   var mouseover = function (countrySalariesMean) {
     var countryName = countrySalariesMean.key;
     var meanSalary = countrySalariesMean.value;
     tooltip
-      .html("Country: " + countryName + "<br>" + "Mean Salary: " + meanSalary)
+      .html(
+        "Country: " + countryName + "<br>" + "Mean Salary in USD: " + meanSalary
+      )
       .style("opacity", 1);
   };
   var mousemove = function (d) {
     tooltip
-      .style("left", d3.mouse(this)[0] + 90 + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
-      .style("top", d3.mouse(this)[1] + "px");
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY - 10 + "px");
   };
   var mouseleave = function (d) {
     tooltip.style("opacity", 0);
@@ -105,8 +109,8 @@ d3.csv("./data/salaries.csv", function (csv_data) {
 
   var updateFunction = function (selectedCountries = []) {
     var updatedData = countrySalariesMean;
-    svg.selectAll("rect").remove();
-    svg.selectAll("g").remove();
+    svgBarchart.selectAll("rect").remove();
+    svgBarchart.selectAll("g").remove();
     if (selectedCountries.length !== 0) {
       updatedData = updatedData.filter(function (d) {
         // Check if string in array of strings
@@ -114,41 +118,62 @@ d3.csv("./data/salaries.csv", function (csv_data) {
       });
     }
 
+    //Add x axis label
+    svgBarchart
+      .append("text")
+      .attr("class", "x label")
+      .attr("text-anchor", "end")
+      .attr("x", width - 100)
+      .attr("y", height / 2 + 50)
+      .text("Country");
+
+    //Add y axis label
+    svgBarchart
+      .append("text")
+      .attr("class", "y label")
+      .attr("text-anchor", "end")
+      .attr("y", 6)
+      .attr("dy", "-4.5em")
+      .attr("transform", "rotate(-90)")
+      .text("Mean-Salary in USD");
+
     // Add X axis
-    x.range([0, width / 1.2])
+    xAxisBarChart
+      .range([0, width / 1.125])
       .domain(
         updatedData.map(function (data) {
           return data.key;
         })
       )
       .padding(0.2);
-    svg
+
+    svgBarchart
       .append("g")
       .attr("transform", "translate(0," + height / 2 + ")")
-      .call(d3.axisBottom(x))
+      .call(d3.axisBottom(xAxisBarChart))
       .selectAll("text")
       .attr("transform", "translate(-10,0)rotate(-45)")
       .style("text-anchor", "end");
 
     // Add Y axis
-    y.domain([0, 160000]).range([height / 2, 0]);
-    svg.append("g").call(d3.axisLeft(y));
+    yAxisBarChart.domain([0, 160000]).range([height / 2, 0]);
+    svgBarchart.append("g").call(d3.axisLeft(yAxisBarChart));
 
     // Add Bars
-    svg
+    svgBarchart
       .selectAll("mybar")
       .data(updatedData)
       .enter()
       .append("rect")
       .attr("x", function (updatedData) {
-        return x(updatedData.key);
+        return xAxisBarChart(updatedData.key);
       })
       .attr("y", function (updatedData) {
-        return y(updatedData.value);
+        return yAxisBarChart(updatedData.value);
       })
-      .attr("width", x.bandwidth())
+      .attr("width", xAxisBarChart.bandwidth())
       .attr("height", function (updatedData) {
-        return height / 2 - y(updatedData.value);
+        return height / 2 - yAxisBarChart(updatedData.value);
       })
       .attr("fill", "#69b3a2")
       .on("mouseover", mouseover)

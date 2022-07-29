@@ -1,298 +1,404 @@
 import getCountryISO2 from "./iso3to2.js";
+//https://d3-graph-gallery.com/graph/choropleth_hover_effect.html
 
-var salary_data = undefined;
-var df_salary = undefined;
+// The svg map
+var svgMap = d3
+  .select("#map")
+  .append("svg")
+  .attr("width", 800)
+  .attr("height", 600);
 
-//read csv file
-await dfd
-  .readCSV("http://localhost:5500/World/data/salaries.csv")
-  .then((df) => {
-    df_salary = df;
-  })
-  .then((error) => {
-    console.log(error);
-  });
+// Map and projection
+var path = d3.geoPath();
+var projection = d3
+  .geoMercator()
+  .scale(100)
+  .center([150, -80])
+  .translate([700, 600]);
 
-await fetch("./data/salaries.json")
-  .then((response) => response.json())
-  .then((data) => (salary_data = data))
-  .catch((error) => console.log(error));
+// Margin for Charts
+var marginCharts = { top: 30, right: 0, bottom: 70, left: 200 },
+  widthCharts = 860 - marginCharts.left - marginCharts.right,
+  heightCharts = 800 - marginCharts.top - marginCharts.bottom;
 
-//get mean salary for country
-function getMeanSalaryForCountry(countryCode) {
-  const countryISO2 = getCountryISO2(countryCode);
-  console.log(countryISO2);
-  console.log(countryCode);
-  const country = countrySalariesMean.filter(function (country) {
-    if (country.key === countryISO2) {
-      return country;
-    }
-  });
-  if (country.length === 0) {
-    return -1;
+// Histogram
+var histogram_svg = d3
+  .select("#histogram")
+  .append("svg")
+  .attr("width", widthCharts + 1000)
+  .attr("height", heightCharts + 20)
+  .style("margin-bottom", "-210px")
+  .append("g")
+  .attr(
+    "transform",
+    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
+  );
+/////////////////////////////////////////////////
+////// TOP TEN JOB TITLES ///////////////////////
+/////////////////////////////////////////////////
+
+var xAxisTopTen = d3.scaleLinear();
+var yAxisTopTen = d3.scaleBand();
+// append the svg object to the body of the page
+var topTenSvg = d3
+  .select("#topTen")
+  .append("svg")
+  .attr("width", widthCharts)
+  .attr("height", heightCharts)
+  .style("margin-bottom", "-210px")
+  .append("g")
+  .attr(
+    "transform",
+    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
+  );
+
+// Data and color scale
+// var data = d3.map();
+
+// Load external data and boot
+d3.queue()
+  //Load external world map data
+  .defer(
+    d3.json,
+    "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"
+  )
+  //Load data
+  .defer(d3.csv, "./data/salaries.csv")
+  .await(ready);
+
+function computeMeanPerCountry(raw_data) {
+  // Group per country and compute mean
+  const countrySalariesMean = d3
+    .nest()
+    .key(function (d) {
+      return d.company_location;
+    })
+    .rollup(function (v) {
+      return d3.mean(v, function (d) {
+        return d.salary_in_usd;
+      });
+    })
+    .entries(raw_data);
+
+  // Build map <k:v> => <country_id:mean_salaray_in_usd>
+  let _data = new Map();
+  for (let i in countrySalariesMean) {
+    _data.set(countrySalariesMean[i].key, countrySalariesMean[i].value);
   }
-  return country[0].value;
+  return _data;
 }
 
-function onCountryMouseOver(event) {
-  const meanSalary = getMeanSalaryForCountry(event.id);
-  if (meanSalary === -1) {
-    return;
+function drawHistogram(incomeData, selectedCountry = undefined) {
+  // Clear previous data from chart
+  histogram_svg.selectAll("rect").remove();
+  histogram_svg.selectAll("g").remove();
+
+  // Check if data is filtered by country
+  if (selectedCountry) {
+    incomeData = incomeData.filter(
+      (d) => d.company_location === selectedCountry
+    );
   }
+  // ----------------
+  // Create a tooltip
+  // ----------------
+  var tooltip = d3
+    .select("#barchart")
+    .append("div")
+    .style("opacity", 0)
+    .attr("class", "tooltip")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("max-width", "200px")
+    .style("padding", "10px")
+    .style("position", "absolute");
 
-  console.log(meanSalary);
-}
+  // Three function that change the tooltip when user hover / move / leave a cell
+  var mouseoverHistogram = function (d) {
+    tooltip
+      .html(` ${d.length} jobs between USD ${d.x0} and USD ${d.x1}`)
+      .style("opacity", 1);
+  };
+  var mousemoveHistogram = function (d) {
+    tooltip
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY - 10 + "px");
+  };
+  var mouseleaveHistogram = function (d) {
+    tooltip.style("opacity", 0);
+  };
 
-const countrySalariesMean = d3
-  .nest()
-  .key(function (d) {
-    return d.company_location;
-  })
-  .rollup(function (v) {
-    return d3.mean(v, function (d) {
-      return d.salary_in_usd;
-    });
-  })
-  .entries(salary_data);
+  //Add x axis label
+  histogram_svg
+    .append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", widthCharts - 220)
+    .attr("y", heightCharts / 2 + 45)
+    .text("Salary in USD");
 
-countrySalariesMean.sort((a, b) => {
-  return b.value - a.value;
-});
+  //Add y axis label
+  histogram_svg
+    .append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("y", 6)
+    .attr("dy", "-3.5em")
+    .attr("transform", "rotate(-90)")
+    .text("Frequency");
 
-console.log(countrySalariesMean);
-
-function getChoroplethColorForCountry(countryCode) {
-  const minSalary = countrySalariesMean[0].value;
-  const maxSalary = countrySalariesMean[countrySalariesMean.length - 1].value;
-
-  console.log(minSalary, maxSalary);
-  var color = d3
+  // X axis: scale and draw
+  var xAxis = d3
     .scaleLinear()
-    .range(["#003B73", "#60A3D9"])
-    .domain([minSalary, maxSalary])
-    .interpolate(d3.interpolateLab);
+    .domain([0, d3.max(incomeData, (d) => d.salary_in_usd)])
+    .range([0, widthCharts / 1.5]);
 
-  const meanSalary = getMeanSalaryForCountry(countryCode);
-  let countryColor = "#303030";
-  if (meanSalary !== -1) {
-    countryColor = color(meanSalary);
-  }
+  histogram_svg
+    .append("g")
+    .attr("transform", "translate(0," + heightCharts / 2 + ")")
+    .call(d3.axisBottom(xAxis));
 
-  return countryColor;
+  // Compute 10 bins for the histogram
+  var histogram = d3
+    .histogram()
+    .value(function (d) {
+      return d.salary_in_usd;
+    })
+    .domain(xAxis.domain())
+    .thresholds(xAxis.ticks(10));
+
+  var bins = histogram(incomeData);
+
+  // Y axis: scale and draw
+  var yAxis = d3.scaleLinear().range([heightCharts / 2, 0]);
+  yAxis.domain([
+    0,
+    d3.max(bins, function (d) {
+      return d.length;
+    }),
+  ]);
+  histogram_svg.append("g").call(d3.axisLeft(yAxis));
+
+  // Draw the bars of the histogram
+  histogram_svg
+    .selectAll("rect")
+    .data(bins)
+    .enter()
+    .append("rect")
+    .attr("x", 1)
+    .attr("transform", function (d) {
+      return "translate(" + xAxis(d.x0) + "," + yAxis(d.length) + ")";
+    })
+    .attr("width", function (d) {
+      return xAxis(d.x1) - xAxis(d.x0) - 1;
+    })
+    .attr("height", function (d) {
+      return heightCharts / 2 - yAxis(d.length);
+    })
+    .style("fill", "#69b3a2")
+    .on("mouseover", mouseoverHistogram)
+    .on("mousemove", mousemoveHistogram)
+    .on("mouseleave", mouseleaveHistogram);
 }
 
-function getChart(params) {
-  // Exposed variables
-  var attrs = {
-    id: "ID" + Math.floor(Math.random() * 1000000), // Id for event handlings
-    svgWidth: 700,
-    svgHeight: 700,
-    marginTop: 5,
-    marginBottom: 5,
-    marginRight: 5,
-    marginLeft: 5,
-    center: [43.5, 44],
-    scale: 250,
-    container: "body",
-    defaultTextFill: "#2C3E50",
-    defaultFont: "Helvetica",
-    geojson: null,
-    data: null,
+function ready(error, topo, incomeData) {
+  const data = computeMeanPerCountry(incomeData);
+
+  var colorScale = d3
+    .scaleQuantize()
+    .domain([d3.min(data.values()), d3.max(data.values())])
+    .range(d3.schemeBlues[7]);
+
+  // Mouse over event
+  let mouseOver = function (d) {
+    // Reset all other countries
+    d3.selectAll(".Country").style("opacity", 1).style("stroke", "transparent");
+
+    // Highlight the hover country
+    d3.selectAll(".Country").transition().duration(200).style("opacity", 0.5);
+    d3.select(this)
+      .transition()
+      .duration(200)
+      .style("opacity", 1)
+      .style("stroke", "black");
   };
 
-  //InnerFunctions
-  var updateData;
-
-  //Main chart object
-  var main = function (selection) {
-    selection.each(function scope() {
-      //Drawing containers
-      var container = d3.select(this);
-
-      //Calculated properties
-      var calc = {};
-      calc.id = "ID" + Math.floor(Math.random() * 1000000); // id for event handlings
-      calc.chartLeftMargin = attrs.marginLeft;
-      calc.chartTopMargin = attrs.marginTop;
-      calc.chartWidth =
-        attrs.svgWidth - attrs.marginRight - calc.chartLeftMargin;
-      calc.chartHeight =
-        attrs.svgHeight - attrs.marginBottom - calc.chartTopMargin;
-
-      /*##################################   HANDLERS  ####################################### */
-      var handlers = {
-        zoomed: null,
-      };
-
-      /*##################################   BEHAVIORS ####################################### */
-      var behaviors = {};
-      behaviors.zoom = d3.zoom().on("zoom", (d) => handlers.zoomed(d));
-
-      /* ############# PROJECTION ############### */
-
-      var projection = d3
-        .geoMercator()
-        .scale(attrs.scale)
-        .translate([calc.chartWidth * 0.56, calc.chartHeight * 0.33])
-        .center(attrs.center);
-
-      var path = d3.geoPath().projection(projection);
-
-      //################################ DRAWING ######################
-
-      //Drawing
-      var svg = container
-        .patternify({ tag: "svg", selector: "svg-chart-container" })
-        .attr("width", attrs.svgWidth)
-        .attr("height", attrs.svgHeight)
-        .attr("font-family", attrs.defaultFont)
-        .call(behaviors.zoom);
-
-      var chart = svg
-        .patternify({ tag: "g", selector: "chart" })
-        .attr(
-          "transform",
-          "translate(" + calc.chartLeftMargin + "," + calc.chartTopMargin + ")"
-        );
-
-      chart
-        .patternify({
-          tag: "path",
-          selector: "map-path",
-          data: attrs.geojson.features,
-        })
-        .attr("d", path)
-        .attr("fill", (d) => {
-          return getChoroplethColorForCountry(d.id);
-        })
-        .on("mouseover", onCountryMouseOver); //random color
-
-      handleWindowResize();
-
-      /* #############################   HANDLER FUNCTIONS    ############################## */
-      handlers.zoomed = function () {
-        var transform = d3.event.transform;
-        chart.attr("transform", transform);
-      };
-
-      function handleWindowResize() {
-        d3.select(window).on("resize." + attrs.id, function () {
-          setDimensions();
-        });
-      }
-
-      function setDimensions() {
-        setSvgWidthAndHeight();
-        container.call(main);
-      }
-
-      function setSvgWidthAndHeight() {
-        var containerRect = container.node().getBoundingClientRect();
-        if (containerRect.width > 0) attrs.svgWidth = containerRect.width;
-        if (containerRect.height > 0) attrs.svgHeight = containerRect.height;
-      }
-
-      // Smoothly handle data updating
-      updateData = function () {};
-
-      //#########################################  UTIL FUNCS ##################################
-      function debug() {
-        if (attrs.isDebug) {
-          //stringify func
-          var stringified = scope + "";
-
-          // parse variable names
-          var groupVariables = stringified
-            //match var x-xx= {};
-            .match(/var\s+([\w])+\s*=\s*{\s*}/gi)
-            //match xxx
-            .map((d) => d.match(/\s+\w*/gi).filter((s) => s.trim()))
-            //get xxx
-            .map((v) => v[0].trim());
-
-          //assign local variables to the scope
-          groupVariables.forEach((v) => {
-            main["P_" + v] = eval(v);
-          });
-        }
-      }
-      debug();
-    });
+  // Mouse over event, reset all styles
+  let mouseLeave = function (d) {
+    d3.selectAll(".Country").transition().duration(200).style("opacity", 1);
+    d3.select(this).transition().duration(200).style("stroke", "transparent");
   };
 
-  //----------- PROTOTYEPE FUNCTIONS  ----------------------
-  d3.selection.prototype.patternify = function (params) {
-    var container = this;
-    var selector = params.selector;
-    var elementTag = params.tag;
-    var data = params.data || [selector];
-
-    // Pattern in action
-    var selection = container.selectAll("." + selector).data(data, (d, i) => {
-      if (typeof d === "object") {
-        if (d.id) {
-          return d.id;
-        }
-      }
-      return i;
-    });
-    selection.exit().remove();
-    selection = selection.enter().append(elementTag).merge(selection);
-    selection.attr("class", selector);
-    return selection;
+  // Mouse click event on country
+  let countryClick = function (d) {
+    const countryISO2 = getCountryISO2(d.id);
+    drawHistogram(incomeData, countryISO2);
+    drawTopten(countryISO2);
   };
 
-  //dinamic keys functions
-  Object.keys(attrs).forEach((key) => {
-    // Attach variables to main function
-    return (main[key] = function (_) {
-      var string = `attrs['${key}'] = _`;
-      if (!arguments.length) {
-        return eval(` attrs['${key}'];`);
-      }
-      eval(string);
-      return main;
-    });
-  });
+  // Draw the map
+  svgMap
+    .append("g")
+    .selectAll("path")
+    .data(topo.features)
+    .enter()
+    .append("path")
+    // draw each country
+    .attr("d", d3.geoPath().projection(projection))
+    // set the color of each country
+    .attr("fill", function (d) {
+      const countryISO2 = getCountryISO2(d.id);
+      d.total = data.get(countryISO2) || 0;
+      return colorScale(d.total);
+    })
+    .style("stroke", "transparent")
+    .attr("class", function (d) {
+      return "Country";
+    })
+    .style("opacity", 0.8)
+    .on("mouseover", mouseOver)
+    .on("mouseleave", mouseLeave)
+    .on("click", countryClick);
 
-  //set attrs as property
-  main.attrs = attrs;
+  /////////////////////////////////////////////////
+  ////// TOP TEN JOB TITLES ///////////////////////
+  /////////////////////////////////////////////////
 
-  //debugging visuals
-  main.debug = function (isDebug) {
-    attrs.isDebug = isDebug;
-    if (isDebug) {
-      if (!window.charts) window.charts = [];
-      window.charts.push(main);
+  const drawTopten = function (selectedCountry = undefined) {
+    let data = incomeData;
+
+    if (selectedCountry !== undefined) {
+      data = data.filter((d) => d.company_location === selectedCountry);
     }
-    return main;
+
+    // Clear previous data from chart
+    topTenSvg.selectAll("rect").remove();
+    topTenSvg.selectAll("g").remove();
+
+    // Value count of job titles
+    let count = d3.rollup(
+      data,
+      (v) => v.length,
+      (d) => d.job_title
+    );
+
+    // Sort job titles by count descending
+    const sortedCount = new Map(
+      [...count.entries()].sort((a, b) => b[1] - a[1])
+    );
+    var topTenData = Array.from(sortedCount).slice(0, 10);
+    topTenData = d3
+      .nest()
+      .key((d) => d[0])
+      .rollup((v) => v[0][1])
+      .entries(topTenData);
+
+    // Add X axis
+    xAxisTopTen.domain([0, topTenData[0].value]).range([0, widthCharts / 1.5]);
+
+    topTenSvg
+      .append("g")
+      .attr("transform", "translate(0," + heightCharts / 2 + ")")
+      .call(d3.axisBottom(xAxisTopTen))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end");
+
+    // Y axis
+    yAxisTopTen
+      .range([0, heightCharts / 2])
+      .domain(
+        topTenData.map(function (d) {
+          return d.key;
+        })
+      )
+      .padding(0.1);
+    topTenSvg.append("g").call(d3.axisLeft(yAxisTopTen));
+
+    //Add x axis label
+    topTenSvg
+      .append("text")
+      .attr("class", "x label")
+      .attr("text-anchor", "end")
+      .attr("x", widthCharts - 220)
+      .attr("y", heightCharts / 2 + 45)
+      .text("Amount of job titles announced");
+
+    //Add y axis label
+    topTenSvg
+      .append("text")
+      .attr("class", "y label")
+      .attr("text-anchor", "end")
+      .attr("y", 6)
+      .attr("dy", "-10.5em")
+      .attr("transform", "rotate(-90)")
+      .text("Job titles");
+
+    // Add Tooltip
+    var tooltip = d3
+      .select("#topTen")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("max-width", "300px")
+      .style("padding", "10px")
+      .style("position", "absolute");
+
+    // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseoverTopTen = function (topTenData) {
+      tooltip
+        .html(
+          "Job-title: " +
+            topTenData.key +
+            "<br>" +
+            "Amount of job titles announced: " +
+            topTenData.value
+        )
+        .style("opacity", 1);
+    };
+    var mousemoveTopTen = function (d) {
+      tooltip
+        .style("left", d3.event.pageX + 10 + "px")
+        .style("top", d3.event.pageY - 10 + "px");
+    };
+    var mouseleaveTopTen = function (d) {
+      tooltip.style("opacity", 0);
+    };
+
+    //Bars
+    topTenSvg
+      .selectAll("myRect")
+      .data(topTenData)
+      .enter()
+      .append("rect")
+      .attr("x", xAxisTopTen(0))
+      .attr("y", function (d) {
+        return yAxisTopTen(d.key);
+      })
+      .attr("width", function (d) {
+        return xAxisTopTen(d.value);
+      })
+      .attr("height", yAxisTopTen.bandwidth())
+      .attr("fill", "#69b3a2")
+      .on("mouseover", mouseoverTopTen)
+      .on("mousemove", mousemoveTopTen)
+      .on("mouseleave", mouseleaveTopTen);
   };
 
-  //exposed update functions
-  main.data = function (value) {
-    if (!arguments.length) return attrs.data;
-    attrs.data = value;
-    if (typeof updateData === "function") {
-      updateData();
-    }
-    return main;
-  };
+  drawTopten("DE");
 
-  // run  visual
-  main.run = function () {
-    d3.selectAll(attrs.container).call(main);
-    return main;
-  };
-
-  return main;
+  // Draw the histogram for the whole world without any filter by default
+  drawHistogram(incomeData);
 }
 
-d3.json("data/world_countries.json").then((json) => {
-  var chart = getChart()
-    .svgHeight(window.innerHeight - 30)
-    .svgWidth(window.innerWidth - 30)
-    .geojson(json)
-    .container("#myGraph")
-    .data("Pass Something Here and use it as attrs.data")
-    .run();
+// Parse the Data
+d3.csv("./data/salaries.csv", function (csv_data) {
+  // const incomeData = csv_data.filter((d) => d.company_location === "AT");
+  //draw top ten with selected user data from map
 });
