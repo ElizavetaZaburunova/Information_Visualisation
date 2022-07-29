@@ -19,6 +19,18 @@ display
 - [ ] Auswahlfeld mit Country, man kann mehrere Länder auswählen
 
 - [ ] Table of top-k job titles (weiß noch nicht welches Chart dafür)
-- [ ] Chart für Remote Job, also employee_residence & company_location -> noch keine Idee was genau und wie
+
 
 Styling!
+
+- Map Größe anpassen
+- Histogramm Größe
+- Histogramm Tooltip
+- Top-k Jobtitles einbauen 
+- Top-k Größe 
+- Top-k Tooltip
+- Barchart Größe 
+- Barchart Tooltip
+
+
+- Dokumentation

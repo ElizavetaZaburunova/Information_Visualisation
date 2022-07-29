@@ -1,7 +1,7 @@
 // set the dimensions and margins of the graph
-var margin = { top: 30, right: 30, bottom: 70, left: 60 },
-  width = 460 - margin.left - margin.right,
-  height = 400 - margin.top - margin.bottom;
+var margin = { top: 30, right: 30, bottom: -450, left: 60 },
+  width = 1000 - margin.left - margin.right,
+  height = 1000 - margin.top;
 
 // append the svg object to the body of the page
 var svg = d3
@@ -14,6 +14,8 @@ var svg = d3
 
 var x = d3.scaleBand();
 var y = d3.scaleLinear();
+
+var g = svg.append("g").attr("transform", "translate(" + 100 + "," + 100 + ")");
 
 d3.csv("./data/salaries.csv", function (csv_data) {
   //get mean salary for country
@@ -53,9 +55,6 @@ d3.csv("./data/salaries.csv", function (csv_data) {
     .text(function (d) {
       return d;
     });
-  // ----------------
-  // HELP with Filtering, I need selected countries AND their salary mean at the end to update the chart
-  // ----------------
   //selection grab all the options, and then filter out those that aren't selected
   dropdown.on("change", function (d) {
     var selections = d3
@@ -73,7 +72,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
   });
 
   // ----------------
-  // Create a tooltip --> HELP: I need the tooltip to be directly right next to the bar
+  // Create a tooltip
   // ----------------
   var tooltip = d3
     .select("#barchart")
@@ -84,6 +83,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
     .style("border", "solid")
     .style("border-width", "1px")
     .style("border-radius", "5px")
+    .style("max-width", "200px")
     .style("padding", "10px");
 
   // Three function that change the tooltip when user hover / move / leave a cell
@@ -115,7 +115,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
     }
 
     // Add X axis
-    x.range([0, width])
+    x.range([0, width / 1.2])
       .domain(
         updatedData.map(function (data) {
           return data.key;
@@ -124,14 +124,14 @@ d3.csv("./data/salaries.csv", function (csv_data) {
       .padding(0.2);
     svg
       .append("g")
-      .attr("transform", "translate(0," + height + ")")
+      .attr("transform", "translate(0," + height / 2 + ")")
       .call(d3.axisBottom(x))
       .selectAll("text")
       .attr("transform", "translate(-10,0)rotate(-45)")
       .style("text-anchor", "end");
 
     // Add Y axis
-    y.domain([0, 160000]).range([height, 0]);
+    y.domain([0, 160000]).range([height / 2, 0]);
     svg.append("g").call(d3.axisLeft(y));
 
     // Add Bars
@@ -148,7 +148,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
       })
       .attr("width", x.bandwidth())
       .attr("height", function (updatedData) {
-        return height - y(updatedData.value);
+        return height / 2 - y(updatedData.value);
       })
       .attr("fill", "#69b3a2")
       .on("mouseover", mouseover)
