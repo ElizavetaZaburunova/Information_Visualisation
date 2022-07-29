@@ -37,6 +37,30 @@ an income of USD 800,000. This outlier was manually removed in order to prevent 
 
 ## Code description
 
+### Project structure
+
+![Project structure](assets/project_structure.png)
+
+- `data/`:
+  - Contains the salary dataset in .csv format and the information about the countries in a GeoJSON format
+- `scripts/`:
+  - `map.js`: Includes the code for the (1) Map (2) Histogram and (3) Top-10 job roles. It also handles all of the interactivity in form of callback functions that redraw the chart witht the updated data or selected country.
+  - `barchart.js`: Contains the code for the barchart with muti-select. Handles the interactivity for the multi-select events and redrawing of the chart.
+  - `iso3to4.js`:
+- `index.html`: Loads all javascript dependencies in the right order, defines placeholder elements in the DOM and loads our custom scripts.
+- `Documentation.md`:
+  - This file. Contains the documentation and overview of the project.
+- `assets/`:
+  - Contains screenshots used in the documentation
+
+### Libraries used
+
+- [D3.js](https://github.com/d3/d3/tree/4) in version 4
+- Generating the color scale with: [d3-scale-chromatic](https://github.com/d3/d3-scale-chromatic)
+- Computing projections for visualisiong the GeoJSON: [d3-geo-projection](https://github.com/d3/d3-geo-projection)
+- Polyfill so that `d3.rollup` can be used D3v4: [d3-array](https://github.com/d3/d3-array)
+- Convert country IDS: [vtex/country-iso-2-to-3](https://github.com/vtex/country-iso-2-to-3)
+
 ## Results
 
 ### Choropleth Map
@@ -99,11 +123,3 @@ all countries that are available in the dataset are selected.
 - Similar to the Top-10 job roles an interactive hover tooltip was added that allows the user to more easily investigate single bars by moving the mouse over them.
 
 ![Barchart country comparison](assets/barchart_country.jpg)
-
-### Libraries used
-
-- [D3v4](https://github.com/d3/d3/tree/4)
-- For maps: [d3-scale-chromatic](https://github.com/d3/d3-scale-chromatic)
-- For maps: [d3-geo-projection](https://github.com/d3/d3-geo-projection)
-- For `d3.rollup`: [d3-array](https://github.com/d3/d3-array)
-- Convert country IDS: [vtex/country-iso-2-to-3](https://github.com/vtex/country-iso-2-to-3) (was adapted to allow the inverse translation)

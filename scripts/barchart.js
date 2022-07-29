@@ -19,6 +19,7 @@ var g = svgBarchart
   .append("g")
   .attr("transform", "translate(" + 100 + "," + 100 + ")");
 
+// read the data
 d3.csv("./data/salaries.csv", function (csv_data) {
   //get mean salary for country
   const countrySalariesMean = d3
@@ -38,6 +39,7 @@ d3.csv("./data/salaries.csv", function (csv_data) {
   return b.value - a.value;
 }); */
 
+  //get the country ids for the dropdown
   var countriesArray = countrySalariesMean.map(function (d) {
     return d.key;
   });

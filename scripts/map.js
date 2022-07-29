@@ -21,40 +21,6 @@ var marginCharts = { top: 30, right: 0, bottom: 70, left: 200 },
   widthCharts = 860 - marginCharts.left - marginCharts.right,
   heightCharts = 800 - marginCharts.top - marginCharts.bottom;
 
-// Histogram
-var histogram_svg = d3
-  .select("#histogram")
-  .append("svg")
-  .attr("width", widthCharts + 1000)
-  .attr("height", heightCharts + 20)
-  .style("margin-bottom", "-210px")
-  .append("g")
-  .attr(
-    "transform",
-    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
-  );
-/////////////////////////////////////////////////
-////// TOP TEN JOB TITLES ///////////////////////
-/////////////////////////////////////////////////
-
-var xAxisTopTen = d3.scaleLinear();
-var yAxisTopTen = d3.scaleBand();
-// append the svg object to the body of the page
-var topTenSvg = d3
-  .select("#topTen")
-  .append("svg")
-  .attr("width", widthCharts)
-  .attr("height", heightCharts)
-  .style("margin-bottom", "-210px")
-  .append("g")
-  .attr(
-    "transform",
-    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
-  );
-
-// Data and color scale
-// var data = d3.map();
-
 // Load external data and boot
 d3.queue()
   //Load external world map data
@@ -64,8 +30,10 @@ d3.queue()
   )
   //Load data
   .defer(d3.csv, "./data/salaries.csv")
+  //Dynamically create Charts, Asyncronous
   .await(ready);
 
+// Calculate the mean of the salary for each country
 function computeMeanPerCountry(raw_data) {
   // Group per country and compute mean
   const countrySalariesMean = d3
@@ -80,13 +48,25 @@ function computeMeanPerCountry(raw_data) {
     })
     .entries(raw_data);
 
-  // Build map <k:v> => <country_id:mean_salaray_in_usd>
   let _data = new Map();
   for (let i in countrySalariesMean) {
     _data.set(countrySalariesMean[i].key, countrySalariesMean[i].value);
   }
   return _data;
 }
+
+// Histogram
+var histogram_svg = d3
+  .select("#histogram")
+  .append("svg")
+  .attr("width", widthCharts + 1000)
+  .attr("height", heightCharts + 20)
+  .style("margin-bottom", "-210px")
+  .append("g")
+  .attr(
+    "transform",
+    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
+  );
 
 function drawHistogram(incomeData, selectedCountry = undefined) {
   // Clear previous data from chart
@@ -203,15 +183,37 @@ function drawHistogram(incomeData, selectedCountry = undefined) {
     .on("mouseleave", mouseleaveHistogram);
 }
 
+//Top 10 countries with highest mean salary
+var xAxisTopTen = d3.scaleLinear();
+var yAxisTopTen = d3.scaleBand();
+// append the svg object to the body of the page
+var topTenSvg = d3
+  .select("#topTen")
+  .append("svg")
+  .attr("width", widthCharts)
+  .attr("height", heightCharts)
+  .style("margin-bottom", "-210px")
+  .append("g")
+  .attr(
+    "transform",
+    "translate(" + marginCharts.left + "," + marginCharts.top + ")"
+  );
+
 function ready(error, topo, incomeData) {
+  if (error) {
+    console.log(error);
+  }
+  // firstly compute the mean salary for each country
   const data = computeMeanPerCountry(incomeData);
 
+  // get different color for each country
   var colorScale = d3
     .scaleQuantize()
     .domain([d3.min(data.values()), d3.max(data.values())])
     .range(d3.schemeBlues[7]);
 
-  // Mouse over event
+  /* Chloropleth map */
+  // Mouse over event on map
   let mouseOver = function (d) {
     // Reset all other countries
     d3.selectAll(".Country").style("opacity", 1).style("stroke", "transparent");
@@ -262,13 +264,10 @@ function ready(error, topo, incomeData) {
     .on("mouseleave", mouseLeave)
     .on("click", countryClick);
 
-  /////////////////////////////////////////////////
-  ////// TOP TEN JOB TITLES ///////////////////////
-  /////////////////////////////////////////////////
-
+  /*  TOP TEN JOB TITLES  */
   const drawTopten = function (selectedCountry = undefined) {
     let data = incomeData;
-
+    // if a country is selected, filter the data
     if (selectedCountry !== undefined) {
       data = data.filter((d) => d.company_location === selectedCountry);
     }
@@ -396,9 +395,3 @@ function ready(error, topo, incomeData) {
   // Draw the histogram for the whole world without any filter by default
   drawHistogram(incomeData);
 }
-
-// Parse the Data
-d3.csv("./data/salaries.csv", function (csv_data) {
-  // const incomeData = csv_data.filter((d) => d.company_location === "AT");
-  //draw top ten with selected user data from map
-});
